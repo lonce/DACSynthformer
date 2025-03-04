@@ -1,4 +1,4 @@
-# DACSynthformer
+## DACSynthformer
 
 DACSynthformer is a basic transformer that runs on the Descript Audio Codec representation of audio. It maintains the "stacked" codebook at each transformer time step (as oppose to laying the codebooks down "horizonally" for examaple). It uses a smallish causal mask during training, so that during autoregressive inference we can use a small context window. It uses RoPE positional encoding because absolute positions are irrelevant for the continuous and stable audio textures we wish to generate. Conditioning is provided as a vector combining a one-hot segment for sound class, and real number(s) for parameters.
 
@@ -54,25 +54,31 @@ Once you have created and are in your conda (or docker) environment and have sta
 
 This runs a very minimal model, and doesn't train long enough to generate anything but codec noise. The intention is that you can see that Training and Inference code is functioning! When that works, you are ready to start creating a new dataset and exploring the model!
 
+**Note:** the parameter you choose for 'device' must be available on your system, and can be either 'cpu', 'cuda', or (for Macs with "Metal Performance Shaders") 'mps'.
+
 ## Preparing data: 
 
 The conda and docker environments have already installed the Descript DAC codec package, so you can encode .wav files to .dacs and decode .dac file to .wavs. Just encode a folder of wav files like this:
 
-`python3 -m dac encode /my/wavs/folder --model_bitrate 8kbps --n_quantizers 4 --output my/output/folder/.` 
+`python3 -m dac encode /my/wavs/folder --model_bitrate 8kbps --n_quantizers 4 --device cpu --output my/output/folder/.` 
 
-For more information about the Descript codec, see the README here:
+The --device you specify needs to be available, and it's default value is 'cuda'. For more information about the Descript codec, see the README here:
 
 https://github.com/descriptinc/descript-audio-codec
 
-Note: All files must be the same length (have the same number of dac frames) and that length will be the context window used for training (I use 5 seconds of audio which the above command converts to 430 dac frames (86 frames/sec). The Tt variable ("T training") must be set in your param yaml file, too. 
+**Note:** All files must be the same length (have the same number of dac frames) and that length will be one more than the context window used for training (becuase the target is the input shifted by 1). (I use 5 seconds of audio which the encode command converts to 431 dac frames (86 frames/sec). The Tt variable ("**T**imesteps **t**raining" = context length) must be set in your param yaml file, too (one less than your file length). You can check the sequence length of your files: 
+
+```bash
+python    utils\dacFileSeqLength.py    path\to\foo.dac
+```
 
 Then prepare your excel data file (that pandas will use). It should have columns, with labels in the first row:
 
 Full File Name     |        Class Name         |    Param1   | ....  | ParamN
 
-The file name includes no path (you provide that in a params.yaml config file). Class Names are whatever you choose. Synthformer will create a separate one-hot class element in the conditioning vector used for training and inference for each unique Class Name. (You can see examples of the excel files in testdata). Consider a balance of classes for your training data! 
+The file name includes no path (you provide that in a params.yaml config file). Class Names are whatever you choose. Synthformer will create a separate one-hot class element in the conditioning vector used for training and inference for each unique Class Name. (You can see examples of the excel files in testdata). Consider a balance of classes for your training data!  The column headers for the params can be whatever name you choose to give them. 
 
-Note: you typically write a little python program to generate your excel Pandas Frames from your collection of data files. 
+Note: you typically write a little python program to generate your excel Pandas Frames from your collection of data files. I generally create datafiles with names that can be parsed to create the excel frames. 
 
 
 

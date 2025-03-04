@@ -13,7 +13,7 @@ num_tokens: 4
 cond_params: 1 #1 (not counting the classes)
 model_size: 64 # must be divisible by num_heads
 
-Ti: 86 # 172 #86
+Ti: 86 # 172 #86 mask size for training and training, mask and windowsize for inference 
 Tt: 430 # must match the length of the sequences in the batch
 batch_size: 4  #**
 
