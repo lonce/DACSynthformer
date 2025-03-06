@@ -1,7 +1,9 @@
-experiment: "lala_test_10_param"
+experiment: "lala_test_256_class"
 
-data_dir: "Lala_data/lala_dac"
-data_frames: "Lala_data/lala-train.xlsx"
+#data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
+#data_frames: "/home/lonce/scratchdata/Lala_data/lala-train.xlsx"
+data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
+data_frames: "/home/lonce/scratchdata/Lala_data/lala-class-train.xlsx"
 validator_data_dir: null
 validator_data_frames: null
 
