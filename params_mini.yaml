@@ -10,7 +10,7 @@ TransformerClass: "RopeCondDACTransformer"
 vocab_size: 1024
 num_tokens: 4
 
-cond_params: 1 #1 (not counting the classes)
+#cond_params: 1 #1 (not counting the classes)
 model_size: 64 # must be divisible by num_heads
 
 Ti: 86 # 172 #86 mask size for training and training, mask and windowsize for inference 
@@ -27,5 +27,5 @@ learning_rate: 0.0005
 num_epochs: 10 ### 800 
 
 ErrorLogRate: 2 #2 ### 10
-checkpoint_interval: 5 ###50 # 25
+checkpoint_interval: 10 ###50 # 25
 

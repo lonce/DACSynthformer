@@ -1,0 +1,31 @@
+experiment: "lala_test_10_param"
+
+data_dir: "Lala_data/lala_dac"
+data_frames: "Lala_data/lala-train.xlsx"
+validator_data_dir: null
+validator_data_frames: null
+
+
+TransformerClass: "RopeCondDACTransformer" 
+vocab_size: 1024
+num_tokens: 4
+
+#cond_params: 1 #1 (not counting the classes)
+model_size: 256 # must be divisible by num_heads
+
+Ti: 43 #86 # 172 #86 mask size for training and training, mask and windowsize for inference 
+Tt: 430 # must match the length of the sequences in the batch
+batch_size: 4  #**
+
+
+num_layers: 4 #**
+num_heads: 8 #8 # 8 # embed_size must be divisible by num_heads
+forward_expansion: 3 #4 #4
+dropout_rate: 0.2
+learning_rate: 0.0005
+
+num_epochs: 8000 ### 800 
+
+ErrorLogRate: 2 #2 ### 10
+checkpoint_interval: 200 ###50 # 25
+

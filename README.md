@@ -69,7 +69,7 @@ https://github.com/descriptinc/descript-audio-codec
 **Note:** All files must be the same length (have the same number of dac frames) and that length will be one more than the context window used for training (becuase the target is the input shifted by 1). (I use 5 seconds of audio which the encode command converts to 431 dac frames (86 frames/sec). The Tt variable ("**T**imesteps **t**raining" = context length) must be set in your param yaml file, too (one less than your file length). You can check the sequence length of your files: 
 
 ```bash
-python    utils\dacFileSeqLength.py    path\to\foo.dac
+python    utils/dacFileSeqLength.py    path/to/foo.dac
 ```
 
 Then prepare your excel data file (that pandas will use). It should have columns, with labels in the first row:
