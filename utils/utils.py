@@ -42,6 +42,15 @@ def load_model(filepath, TransformerClass, device='cuda'):
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer = torch.optim.Adam(model.parameters())
     optimizer.load_state_dict(checkpoint['optimizer_state_dict']) #also restored lr
+
+    model.to(device)
+
+    # Move optimizer tensors to the correct device
+    for state in optimizer.state.values():
+        for k, v in state.items():
+            if isinstance(v, torch.Tensor):
+                state[k] = v.to(device)
+            
     
     model.eval()
     return model, optimizer, inf_context_length, checkpoint['vocab_size'], checkpoint['num_codebooks'], checkpoint['cond_size'] # used for consructing the initial input window to the model

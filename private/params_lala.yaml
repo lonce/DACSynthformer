@@ -1,9 +1,9 @@
-experiment: "lala_test_256_class"
+experiment: "2025.03.07b_lala_test_256_class"
 
 #data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
 #data_frames: "/home/lonce/scratchdata/Lala_data/lala-train.xlsx"
 data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
-data_frames: "/home/lonce/scratchdata/Lala_data/lala-class-train.xlsx"
+data_frames: "/home/lonce/scratchdata/Lala_data/lala_class_train.xlsx"
 validator_data_dir: null
 validator_data_frames: null
 
@@ -22,12 +22,12 @@ batch_size: 4  #**
 
 num_layers: 4 #**
 num_heads: 8 #8 # 8 # embed_size must be divisible by num_heads
-forward_expansion: 3 #4 #4
+forward_expansion: 4 #4 #4
 dropout_rate: 0.2
 learning_rate: 0.0005
 
 num_epochs: 8000 ### 800 
 
-ErrorLogRate: 2 #2 ### 10
-checkpoint_interval: 200 ###50 # 25
+ErrorLogRate: 100 #2 ### 10
+checkpoint_interval: 500 ###50 # 25
 
