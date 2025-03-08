@@ -55,4 +55,4 @@ def savefordiary(adata, param_jpg, pathname, fname, dfile, sr=44100):
 #    print(f"- Copied data file: {dfile_copy_path}")
 #    print(f"- Notebook cell text saved in: {notebook_text_path}:")
     print(f"{notebook_text}")
-    return notebook_text_path
+    return notebook_text, notebook_text_path

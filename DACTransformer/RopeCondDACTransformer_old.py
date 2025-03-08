@@ -55,10 +55,10 @@ class FiLM(nn.Module):
         return gamma * x + beta
 
 #--------------------------------------------------------------
-# Transformer Block 
+# Transformer Block - input_size is embed_size+conditioning vector size.
 
 class TransformerBlock(nn.Module):
-    def __init__(self, cond_size, embed_size, num_heads, dropout, forward_expansion, rotary_positional_embedding, verbose=0):
+    def __init__(self, input_size, embed_size, num_heads, dropout, forward_expansion, rotary_positional_embedding, verbose=0):
         super(TransformerBlock, self).__init__()
 
         self.embed_size = embed_size
@@ -81,8 +81,8 @@ class TransformerBlock(nn.Module):
             nn.Linear(forward_expansion * embed_size, embed_size),
         )
         self.dropout_layer = nn.Dropout(dropout)
-        self.film1 = FiLM(cond_size, embed_size)  # First FiLM before attention
-        self.film2 = FiLM(cond_size, embed_size)  # Second FiLM before MLP
+        self.film1 = FiLM(input_size - embed_size, embed_size)  # First FiLM before attention
+        self.film2 = FiLM(input_size - embed_size, embed_size)  # Second FiLM before MLP
 
     def forward(self, src, cond, mask=None):
         """
@@ -131,6 +131,7 @@ class RopeCondDACTransformer(nn.Module):
         # num_classes isn´t used here, but it is in other decoders
         super(RopeCondDACTransformer, self).__init__()
         self.embed_size = embed_size
+        self.input_size = embed_size + cond_size
         self.num_codebooks = num_codebooks
         self.vocab_size = vocab_size
         self.verbose = verbose
@@ -139,7 +140,7 @@ class RopeCondDACTransformer(nn.Module):
         self.forward_expansion = forward_expansion
         self.dropout = dropout
         self.max_len = max_len
-        self.cond_size=cond_size
+        self.cond_size = cond_size
         self.num_classes = num_classes
         self.num_layers = num_layers
 
@@ -155,7 +156,7 @@ class RopeCondDACTransformer(nn.Module):
         # Create transformer layers
         self.layers = nn.ModuleList([
             TransformerBlock(
-                cond_size=cond_size,
+                input_size=self.input_size,
                 embed_size=embed_size,
                 num_heads=num_heads,
                 dropout=dropout,

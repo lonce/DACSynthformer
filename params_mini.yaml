@@ -1,4 +1,4 @@
-experiment: "mini_test_01"
+experiment: "mini_test_100"
 
 data_dir: "testdata/dac-train"
 data_frames: "testdata/dac-train.xlsx"
