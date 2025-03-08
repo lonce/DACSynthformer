@@ -41,6 +41,19 @@ class MultiEmbedding(nn.Module):
         #print(f"------- In MultiEmbedding will return a vector of shape  ={torch.cat(embeddings, dim=-1).shape}")
         return torch.cat(embeddings, dim=-1)  # Concatenate embeddings along the last dimension
 
+
+#--------------------------------------------------------------
+class FiLM(nn.Module):
+    def __init__(self, cond_size, embed_size):
+        super(FiLM, self).__init__()
+        self.linear_gamma = nn.Linear(cond_size, embed_size)  # Scale factor
+        self.linear_beta = nn.Linear(cond_size, embed_size)   # Shift factor
+    
+    def forward(self, x, cond):
+        gamma = self.linear_gamma(cond)
+        beta = self.linear_beta(cond)
+        return gamma * x + beta
+
 #--------------------------------------------------------------
 # Transformer Block - input_size is embed_size+conditioning vector size.
 
@@ -49,16 +62,14 @@ class TransformerBlock(nn.Module):
         super(TransformerBlock, self).__init__()
 
         self.embed_size = embed_size
-        self.input_size = input_size
         self.verbose = verbose
-        # self.attention = nn.MultiheadAttention(embed_dim=embed_size, num_heads=num_heads, dropout=dropout, batch_first=True)
         self.attention = MultiheadAttentionWithRoPE(
             embed_dim=embed_size,
             num_heads=num_heads,
             rotary_positional_embedding=rotary_positional_embedding,
             verbose=verbose,
             dropout=dropout,
-            bias=True,  # Enable bias
+            bias=True,
             batch_first=True
         )
 
@@ -70,12 +81,12 @@ class TransformerBlock(nn.Module):
             nn.Linear(forward_expansion * embed_size, embed_size),
         )
         self.dropout_layer = nn.Dropout(dropout)
-        self.linear_reduce = nn.Linear(input_size, embed_size)  # Adjust size after concatenation
-        #self.rotary_positional_embedding = rotary_positional_embedding
+        self.film1 = FiLM(input_size - embed_size, embed_size)  # First FiLM before attention
+        self.film2 = FiLM(input_size - embed_size, embed_size)  # Second FiLM before MLP
 
     def forward(self, src, cond, mask=None):
         """
-        Forward pass for the TransformerBlock with masking.
+        Forward pass for the TransformerBlock with dual FiLM-based conditioning.
 
         Args:
         - src (torch.Tensor): Input tensor of shape (batch_size, seq_len, embed_size).
@@ -88,40 +99,30 @@ class TransformerBlock(nn.Module):
         
         # Normalize embeddings first
         normalized_src = self.norm1(src)
-        if self.verbose >0  :
+        if self.verbose > 0:
             print(f"Normalized src shape: {normalized_src.shape}")
-            print(f"cond shape before expanding is : {cond.shape}")
+            print(f"Cond shape: {cond.shape}")
 
-        
-
-
-
-
-        cond_expanded = cond
-        # Concatenate conditional vector after normalization
-        combined = torch.cat((normalized_src, cond_expanded), dim=-1)
-        if self.verbose >0  :
-            print(f"Combined shape (src + cond): {combined.shape}")
-
-        # Reduce dimensionality back to embed_size
-        reduced = self.linear_reduce(combined)
+        # Apply first FiLM to inject conditioning before attention
+        modulated_src = self.film1(normalized_src, cond)
         if self.verbose > 0:
-            print(f"Reduced shape after linear projection: {reduced.shape}")
+            print(f"FiLM-modulated shape before attention: {modulated_src.shape}")
 
-        # Pass through custom attention with RoPE
-        attention_output, _ = self.attention(reduced, reduced, reduced, attn_mask=mask)
+        # Pass through attention with RoPE
+        attention_output, _ = self.attention(modulated_src, modulated_src, modulated_src, attn_mask=mask)
+        x = self.dropout_layer(attention_output) + modulated_src
 
+        # Apply second FiLM before the MLP
+        modulated_x = self.film2(self.norm2(x), cond)
         if self.verbose > 0:
-            print("Attention output shape:", attention_output.shape)
-        x = self.dropout_layer(attention_output) + reduced
+            print(f"FiLM-modulated shape before MLP: {modulated_x.shape}")
 
         # Apply feed-forward network
-        forward = self.feed_forward(self.norm2(x))
-        if self.verbose > 0:
-            print("Feed-forward output shape:", forward.shape)
+        forward = self.feed_forward(modulated_x)
         out = self.dropout_layer(forward) + x
 
         return out
+
 #-------------------------------------------------------------------
 
 class RopeCondDACTransformer(nn.Module):
