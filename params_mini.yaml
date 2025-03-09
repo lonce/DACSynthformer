@@ -23,9 +23,10 @@ num_heads: 4 #8 # 8 # embed_size must be divisible by num_heads
 forward_expansion: 2 #4 #4
 dropout_rate: 0.2
 learning_rate: 0.0005
+use_adaLN: True #else FiLM
 
-num_epochs: 10 ### 800 
+num_epochs: 100 ### 800 
 
-ErrorLogRate: 2 #2 ### 10
-checkpoint_interval: 10 ###50 # 25
+ErrorLogRate: 10 #2 ### 10
+checkpoint_interval: 100 ###50 # 25
 

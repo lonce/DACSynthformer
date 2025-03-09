@@ -8,6 +8,29 @@ In this version of the Transformer, the positional encoding is applied dynamical
 """
 
 # Rotary Positional Embedding
+# class RotaryPositionalEmbedding(nn.Module):
+#     def __init__(self, dim, max_len=1024):
+#         super().__init__()
+#         self.dim = dim // 2
+#         inv_freq = 1.0 / (10000 ** (torch.arange(0.0, self.dim, 2.0) / self.dim))
+#         t = torch.arange(max_len).unsqueeze(1)
+#         freqs = t * inv_freq.unsqueeze(0)
+#         self.register_buffer('sinusoid', torch.cat([freqs.sin(), freqs.cos()], dim=-1))
+
+#     def forward(self, qk):
+#         #print(f"------- In Rotary forward, x.shape is ={x.shape}")
+#         n, seq_len, d = qk.shape
+#         sinusoid = self.sinusoid[:seq_len, :].to(qk.device)
+#         sinusoid = sinusoid.repeat_interleave(2, dim=1)  # Ensure sinusoid covers all dimensions
+#         sin_part, cos_part = sinusoid[:, :d//2], sinusoid[:, d//2:]
+
+#         qk_sin = qk[:, :, :d//2] * sin_part - qk[:, :, d//2:] * cos_part
+#         qk_cos = qk[:, :, :d//2] * cos_part + qk[:, :, d//2:] * sin_part
+
+#         return torch.cat((qk_sin, qk_cos), dim=-1)
+
+
+# ------------------------------------------------------------------------------
 class RotaryPositionalEmbedding(nn.Module):
     def __init__(self, dim, max_len=1024):
         super().__init__()
@@ -15,19 +38,23 @@ class RotaryPositionalEmbedding(nn.Module):
         inv_freq = 1.0 / (10000 ** (torch.arange(0.0, self.dim, 2.0) / self.dim))
         t = torch.arange(max_len).unsqueeze(1)
         freqs = t * inv_freq.unsqueeze(0)
-        self.register_buffer('sinusoid', torch.cat([freqs.sin(), freqs.cos()], dim=-1))
+        sinusoid = torch.cat([freqs.sin(), freqs.cos()], dim=-1)
+
+        # Precompute interleaved sin/cos parts separately
+        sinusoid = sinusoid.repeat_interleave(2, dim=1)
+        self.register_buffer('sin_part', sinusoid[:, :dim//2])
+        self.register_buffer('cos_part', sinusoid[:, dim//2:])
 
     def forward(self, qk):
-        #print(f"------- In Rotary forward, x.shape is ={x.shape}")
         n, seq_len, d = qk.shape
-        sinusoid = self.sinusoid[:seq_len, :].to(qk.device)
-        sinusoid = sinusoid.repeat_interleave(2, dim=1)  # Ensure sinusoid covers all dimensions
-        sin_part, cos_part = sinusoid[:, :d//2], sinusoid[:, d//2:]
+        sin_part = self.sin_part[:seq_len, :].to(qk.device)
+        cos_part = self.cos_part[:seq_len, :].to(qk.device)
 
         qk_sin = qk[:, :, :d//2] * sin_part - qk[:, :, d//2:] * cos_part
         qk_cos = qk[:, :, :d//2] * cos_part + qk[:, :, d//2:] * sin_part
 
         return torch.cat((qk_sin, qk_cos), dim=-1)
+# ------------------------------------------------------------------------------
 
 # Multiembedding Layer
 class MultiEmbedding(nn.Module):
@@ -55,14 +82,34 @@ class FiLM(nn.Module):
         return gamma * x + beta
 
 #--------------------------------------------------------------
-# Transformer Block 
+class AdaLN(nn.Module):
+    def __init__(self, cond_size, embed_size):
+        super(AdaLN, self).__init__()
+        self.linear_mu = nn.Linear(cond_size, embed_size)
+        self.linear_sigma = nn.Linear(cond_size, embed_size)
+        self.linear_gamma = nn.Linear(cond_size, embed_size)
+        self.linear_beta = nn.Linear(cond_size, embed_size)
 
+    def forward(self, x, cond):
+        # Compute adaptive mean and standard deviation from conditioning
+        mu = self.linear_mu(cond)
+        sigma = torch.exp(self.linear_sigma(cond))  # Ensure positivity
+        norm_x = (x - mu) / (sigma + 1e-6)  # Apply adaptive normalization
+
+        gamma = self.linear_gamma(cond)
+        beta = self.linear_beta(cond)
+        
+        return gamma * norm_x + beta
+
+#--------------------------------------------------------------
+# Transformer Block with Toggleable FiLM or AdaLN
 class TransformerBlock(nn.Module):
-    def __init__(self, cond_size, embed_size, num_heads, dropout, forward_expansion, rotary_positional_embedding, verbose=0):
+    def __init__(self, cond_size, embed_size, num_heads, dropout, forward_expansion, rotary_positional_embedding, use_adaLN=False, verbose=0):
         super(TransformerBlock, self).__init__()
 
         self.embed_size = embed_size
         self.verbose = verbose
+        self.use_adaLN = use_adaLN  # Toggle between FiLM and AdaLN
         self.attention = MultiheadAttentionWithRoPE(
             embed_dim=embed_size,
             num_heads=num_heads,
@@ -81,41 +128,29 @@ class TransformerBlock(nn.Module):
             nn.Linear(forward_expansion * embed_size, embed_size),
         )
         self.dropout_layer = nn.Dropout(dropout)
-        self.film1 = FiLM(cond_size, embed_size)  # First FiLM before attention
-        self.film2 = FiLM(cond_size, embed_size)  # Second FiLM before MLP
+        
+        # Choose between FiLM and AdaLN
+        self.conditioning1 = AdaLN(cond_size, embed_size) if use_adaLN else FiLM(cond_size, embed_size)
+        self.conditioning2 = AdaLN(cond_size, embed_size) if use_adaLN else FiLM(cond_size, embed_size)
 
     def forward(self, src, cond, mask=None):
-        """
-        Forward pass for the TransformerBlock with dual FiLM-based conditioning.
+        if not self.use_adaLN:
+            src = self.norm1(src)
+        if self.verbose > 0:
+            print(f"Conditioning-modulated shape before attention: {src.shape}")
 
-        Args:
-        - src (torch.Tensor): Input tensor of shape (batch_size, seq_len, embed_size).
-        - cond (torch.Tensor): Conditioning tensor of shape (batch_size, seq_len, cond_size).
-        - mask (torch.Tensor): Attention mask of shape (seq_len, seq_len).
-
-        Returns:
-        - torch.Tensor: Processed tensor of shape (batch_size, seq_len, embed_size).
-        """
+        # Apply conditioning (FiLM or AdaLN) before attention
+        modulated_src = self.conditioning1(src, cond)
         
-        # Normalize embeddings first
-        normalized_src = self.norm1(src)
-        if self.verbose > 0:
-            print(f"Normalized src shape: {normalized_src.shape}")
-            print(f"Cond shape: {cond.shape}")
-
-        # Apply first FiLM to inject conditioning before attention
-        modulated_src = self.film1(normalized_src, cond)
-        if self.verbose > 0:
-            print(f"FiLM-modulated shape before attention: {modulated_src.shape}")
-
         # Pass through attention with RoPE
         attention_output, _ = self.attention(modulated_src, modulated_src, modulated_src, attn_mask=mask)
         x = self.dropout_layer(attention_output) + modulated_src
 
-        # Apply second FiLM before the MLP
-        modulated_x = self.film2(self.norm2(x), cond)
-        if self.verbose > 0:
-            print(f"FiLM-modulated shape before MLP: {modulated_x.shape}")
+        if not self.use_adaLN:
+            x = self.norm2(x)
+        
+        # Apply conditioning (FiLM or AdaLN) before the MLP
+        modulated_x = self.conditioning2(x, cond)
 
         # Apply feed-forward network
         forward = self.feed_forward(modulated_x)
@@ -124,35 +159,29 @@ class TransformerBlock(nn.Module):
         return out
 
 #-------------------------------------------------------------------
-
 class RopeCondDACTransformer(nn.Module):
-
-    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, verbose=False):
-        # num_classes isn´t used here, but it is in other decoders
+    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, use_adaLN=False, verbose=False):
         super(RopeCondDACTransformer, self).__init__()
         self.embed_size = embed_size
-        self.num_codebooks = num_codebooks
-        self.vocab_size = vocab_size
-        self.verbose = verbose
-
         self.num_heads = num_heads
         self.forward_expansion = forward_expansion
         self.dropout = dropout
         self.max_len = max_len
-        self.cond_size=cond_size
         self.num_classes = num_classes
         self.num_layers = num_layers
+        self.num_codebooks = num_codebooks
+        self.vocab_size = vocab_size
+        self.cond_size = cond_size
+        self.verbose = verbose
+        self.use_adaLN = use_adaLN  # Toggle for conditioning type
 
-        temp_head_dim = self.embed_size // num_heads
-        print(f" ------------- embed_dim ({self.embed_size}) must be divisible by num_heads ({num_heads})")
-        assert temp_head_dim * num_heads == self.embed_size, f"embed_dim ({self.embed_size}) must be divisible by num_heads ({num_heads})"
-
+        assert (self.embed_size // num_heads) * num_heads == self.embed_size, f"embed_dim ({self.embed_size}) must be divisible by num_heads ({num_heads})"
         print(f"Setting up MultiEmbedding with vocab_size= {vocab_size}, embed_size= {embed_size}, num_codebooks= {num_codebooks}")
+        
         self.multi_embedding = MultiEmbedding(vocab_size, embed_size // num_codebooks, num_codebooks)
-        print(f"Setting up RotaryPositionalEmbedding with embed_size= {embed_size}, max_len= {max_len}")        
         self.positional_embedding = RotaryPositionalEmbedding(embed_size, max_len)
+        self.dropout_layer = nn.Dropout(dropout)
 
-        # Create transformer layers
         self.layers = nn.ModuleList([
             TransformerBlock(
                 cond_size=cond_size,
@@ -161,12 +190,12 @@ class RopeCondDACTransformer(nn.Module):
                 dropout=dropout,
                 forward_expansion=forward_expansion,
                 rotary_positional_embedding=self.positional_embedding,
+                use_adaLN=use_adaLN,
                 verbose=verbose
             )
             for _ in range(num_layers)
         ])
 
-        self.dropout_layer = nn.Dropout(dropout)
         self.final_layer = nn.Linear(embed_size, num_codebooks * vocab_size)
 
     def forward(self, src, cond, mask=None):
@@ -187,13 +216,9 @@ class RopeCondDACTransformer(nn.Module):
             if mask is not None:
                 print(f"Mask shape: {mask.shape}")
 
-        # Embed the input tokens
         src = self.multi_embedding(src)
-        if self.verbose > 5:
-            print(f"Multi-embedded output shape: {src.shape}")
         src = self.dropout_layer(src)
 
-        # Pass through transformer layers
         for i, layer in enumerate(self.layers):
             if self.verbose > 6:
                 print(f"Passing through layer {i}")
@@ -207,3 +232,4 @@ class RopeCondDACTransformer(nn.Module):
             print(f"================================================================")
 
         return logits
+

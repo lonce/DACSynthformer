@@ -17,6 +17,7 @@ def save_model(model, optimizer, inf_context_length, filepath):
         'num_codebooks': model.num_codebooks, 
         'vocab_size': model.vocab_size,
         'cond_size': model.cond_size,
+        'use_adaLN' : model.use_adaLN,
         'num_classes': model.num_classes,
     }, filepath)
 
@@ -37,6 +38,7 @@ def load_model(filepath, TransformerClass, device='cuda'):
         num_codebooks=checkpoint['num_codebooks'],
         vocab_size=checkpoint['vocab_size'],
         cond_size= checkpoint['cond_size'],
+        use_adaLN= checkpoint['use_adaLN'],
         num_classes = checkpoint['num_classes']
     )
     model.load_state_dict(checkpoint['model_state_dict'])
