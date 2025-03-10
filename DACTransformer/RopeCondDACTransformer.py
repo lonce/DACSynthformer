@@ -71,12 +71,16 @@ class MultiEmbedding(nn.Module):
 
 #--------------------------------------------------------------
 class FiLM(nn.Module):
-    def __init__(self, cond_size, embed_size):
+    def __init__(self, cond_size, embed_size, verbose=0):
         super(FiLM, self).__init__()
         self.linear_gamma = nn.Linear(cond_size, embed_size)  # Scale factor
         self.linear_beta = nn.Linear(cond_size, embed_size)   # Shift factor
+        self.verbose=verbose
     
     def forward(self, x, cond):
+        if self.verbose > 5:
+            print(f"FiLM cond.shape is : {cond.shape}")
+            
         gamma = self.linear_gamma(cond)
         beta = self.linear_beta(cond)
         return gamma * x + beta
@@ -120,8 +124,8 @@ class TransformerBlock(nn.Module):
             batch_first=True
         )
 
-        self.norm1 = nn.LayerNorm(embed_size)
-        self.norm2 = nn.LayerNorm(embed_size)
+        self.norm1 = nn.LayerNorm(embed_size, elementwise_affine=False)
+        self.norm2 = nn.LayerNorm(embed_size, elementwise_affine=False)
         self.feed_forward = nn.Sequential(
             nn.Linear(embed_size, forward_expansion * embed_size),
             nn.ReLU(),
@@ -130,8 +134,8 @@ class TransformerBlock(nn.Module):
         self.dropout_layer = nn.Dropout(dropout)
         
         # Choose between FiLM and AdaLN
-        self.conditioning1 = AdaLN(cond_size, embed_size) if use_adaLN else FiLM(cond_size, embed_size)
-        self.conditioning2 = AdaLN(cond_size, embed_size) if use_adaLN else FiLM(cond_size, embed_size)
+        self.conditioning1 = AdaLN(cond_size, embed_size) if use_adaLN else FiLM(cond_size, embed_size, verbose)
+        self.conditioning2 = AdaLN(cond_size, embed_size) if use_adaLN else FiLM(cond_size, embed_size, verbose)
 
     def forward(self, src, cond, mask=None):
         if not self.use_adaLN:
@@ -160,7 +164,7 @@ class TransformerBlock(nn.Module):
 
 #-------------------------------------------------------------------
 class RopeCondDACTransformer(nn.Module):
-    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, use_adaLN=False, verbose=False):
+    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, use_adaLN=False, verbose=0):
         super(RopeCondDACTransformer, self).__init__()
         self.embed_size = embed_size
         self.num_heads = num_heads

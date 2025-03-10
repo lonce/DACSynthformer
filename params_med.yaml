@@ -21,6 +21,7 @@ num_heads: 2 #8 # 8 # embed_size must be divisible by num_heads
 forward_expansion: 2 #4 #4
 dropout_rate: 0.2
 learning_rate: 0.0005
+use_adaLN: True #else FiLM
 
 num_epochs: 1000 ### 800 
 

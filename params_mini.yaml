@@ -1,4 +1,4 @@
-experiment: "mini_test_100"
+experiment: "mini_test_1"
 
 data_dir: "testdata/dac-train"
 data_frames: "testdata/dac-train.xlsx"
@@ -13,7 +13,7 @@ num_tokens: 4
 #cond_params: 1 #1 (not counting the classes)
 model_size: 64 # must be divisible by num_heads
 
-Ti: 86 # 172 #86 mask size for training and training, mask and windowsize for inference 
+Ti: 43 # 172 #86 mask size for training and training, mask and windowsize for inference 
 Tt: 430 # must match the length of the sequences in the batch
 batch_size: 4  #**
 
@@ -23,10 +23,10 @@ num_heads: 4 #8 # 8 # embed_size must be divisible by num_heads
 forward_expansion: 2 #4 #4
 dropout_rate: 0.2
 learning_rate: 0.0005
-use_adaLN: True #else FiLM
+use_adaLN: False #else FiLM
 
-num_epochs: 100 ### 800 
+num_epochs: 2 ### 800 
 
-ErrorLogRate: 10 #2 ### 10
-checkpoint_interval: 100 ###50 # 25
+ErrorLogRate: 1 #2 ### 10
+checkpoint_interval: 2 ###50 # 25
 

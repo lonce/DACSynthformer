@@ -1,9 +1,9 @@
-experiment: "nsynth_test_512.l4.ti43.exp4_short"
+experiment: "2025.03.10_nsynth_test_512.l4.ti43.exp4_short"
 
 #data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
 #data_frames: "/home/lonce/scratchdata/Lala_data/lala-train.xlsx"
 data_dir: "/home/lonce/scratchdata/nsynth44.1/nsynth44.1_dac"
-data_frames: "/home/lonce/scratchdata/nsynth44.1/nsynth44.1.xlsx"
+data_frames: "/home/lonce/scratchdata/nsynth44.1/nsynth44.1_pfloat.xlsx"
 validator_data_dir: null
 validator_data_frames: null
 
@@ -25,6 +25,7 @@ num_heads: 8 #8 # 8 # embed_size must be divisible by num_heads
 forward_expansion: 4 #4 #4
 dropout_rate: 0.2
 learning_rate: 0.0005
+use_adaLN: True #else FiLM
 
 num_epochs: 100 ### 800 
 

@@ -23,7 +23,7 @@ def save_model(model, optimizer, inf_context_length, filepath):
 
 #-----------------------------------------------------
 
-def load_model(filepath, TransformerClass, device='cuda'):
+def load_model(filepath, TransformerClass, device='cuda', verbose=0):
     checkpoint = torch.load(filepath, map_location=device)  
     inf_context_length = checkpoint['inf_context_length'] # This is used to set the context length for the inference model
     
@@ -39,7 +39,8 @@ def load_model(filepath, TransformerClass, device='cuda'):
         vocab_size=checkpoint['vocab_size'],
         cond_size= checkpoint['cond_size'],
         use_adaLN= checkpoint['use_adaLN'],
-        num_classes = checkpoint['num_classes']
+        num_classes = checkpoint['num_classes'],
+        verbose=verbose
     )
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer = torch.optim.Adam(model.parameters())
