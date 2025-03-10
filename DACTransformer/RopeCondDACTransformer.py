@@ -3,6 +3,35 @@ import torch.nn as nn
 
 from .MultiheadAttentionWithRoPE import MultiheadAttentionWithRoPE
 
+
+
+class ConditioningEmbedding(nn.Module):
+    """
+    Embed the conditioning vector before injecting it with FiLM
+    """
+    def __init__(self, cond_dim, embed_dim, hidden_dim=64):
+        """
+        Maps the full conditioning vector (pitch, loudness, instrument) into an embedding.
+
+        Args:
+            cond_dim (int): Total size of the conditioning vector (float + one-hot).
+            embed_dim (int): Output embedding dimension for FiLM.
+            hidden_dim (int): Hidden size for MLP processing.
+        """
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(cond_dim, hidden_dim),  # Map raw inputs to hidden space
+            nn.ReLU(), 
+            nn.Linear(hidden_dim, embed_dim)  # Map to final embedding space
+        )
+
+    def forward(self, cond):
+        return self.mlp(cond)  # Shape: (batch, embed_dim)
+
+
+
+
+
 """
 In this version of the Transformer, the positional encoding is applied dynamically to the query and key vectors within each Transformer block, as required for Rotary Positional Encoding (RoPE). The redundant RoPE application to the initial embedding has been removed. All other logic, comments, and verbosity remain unchanged.
 """
@@ -70,20 +99,54 @@ class MultiEmbedding(nn.Module):
 
 
 #--------------------------------------------------------------
+#- class FiLM(nn.Module):
+#-     def __init__(self, cond_size, embed_size, verbose=0):
+#-         super(FiLM, self).__init__()
+#-         self.linear_gamma = nn.Linear(cond_size, embed_size)  # Scale factor
+#-         self.linear_beta = nn.Linear(cond_size, embed_size)   # Shift factor
+#-         self.verbose=verbose
+#-     
+#-     def forward(self, x, cond):
+#-         if self.verbose > 5:
+#-             print(f"FiLM cond.shape is : {cond.shape}")
+#-             
+#-         gamma = self.linear_gamma(cond)
+#-         beta = self.linear_beta(cond)
+#-         return gamma * x + beta
+
+
 class FiLM(nn.Module):
     def __init__(self, cond_size, embed_size, verbose=0):
+        """
+        FiLM modulation with an MLP-based conditioning embedding.
+        
+        Args:
+            cond_size (int): Size of the raw conditioning vector.
+            embed_size (int): Size of the transformer's sequence embeddings.
+        """
         super(FiLM, self).__init__()
-        self.linear_gamma = nn.Linear(cond_size, embed_size)  # Scale factor
-        self.linear_beta = nn.Linear(cond_size, embed_size)   # Shift factor
-        self.verbose=verbose
-    
+        
+        # Add the conditioning embedding
+        self.cond_embedding = ConditioningEmbedding(cond_size, 64)
+        
+        # FiLM scaling and shifting
+        self.linear_gamma = nn.Linear(64, embed_size)  # Scale factor
+        self.linear_beta = nn.Linear(64, embed_size)   # Shift factor
+        self.verbose = verbose
+
     def forward(self, x, cond):
+        # First, compute a learned embedding of the conditioning vector
+        cond_emb = self.cond_embedding(cond)
+
         if self.verbose > 5:
-            print(f"FiLM cond.shape is : {cond.shape}")
-            
-        gamma = self.linear_gamma(cond)
-        beta = self.linear_beta(cond)
+            print(f"FiLM cond.shape is : {cond_emb.shape}")
+
+        # Compute FiLM parameters
+        gamma = self.linear_gamma(cond_emb)
+        beta = self.linear_beta(cond_emb)
+
         return gamma * x + beta
+
 
 #--------------------------------------------------------------
 class AdaLN(nn.Module):

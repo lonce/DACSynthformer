@@ -1,4 +1,4 @@
-experiment: "2025.03.07b_lala_test_256_float_FiLM"
+experiment: "2025.03.07b_lala_test_256_float_FiLM_CondEmbed"
 
 #data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
 #data_frames: "/home/lonce/scratchdata/Lala_data/lala-train.xlsx"

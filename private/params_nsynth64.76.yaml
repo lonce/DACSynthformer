@@ -1,4 +1,4 @@
-experiment: "2025.03.10_nsynth_test_512.l4.ti43.exp4_short"
+experiment: "2025.03.10_nsynth_test_512.l4.ti43.exp4_pfloat_embed"
 
 #data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
 #data_frames: "/home/lonce/scratchdata/Lala_data/lala-train.xlsx"
@@ -27,8 +27,8 @@ dropout_rate: 0.2
 learning_rate: 0.0005
 use_adaLN: True #else FiLM
 
-num_epochs: 100 ### 800 
+num_epochs: 10000 ### 800 
 
-ErrorLogRate: 10 #2 ### 10
-checkpoint_interval: 10 ###50 # 25
+ErrorLogRate: 100 #2 ### 10
+checkpoint_interval: 1000 ###50 # 25
 
