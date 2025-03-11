@@ -1,9 +1,9 @@
-experiment: "2025.03.10_nsynth_test_512.l4.ti43.exp4_pfloat_embed"
+experiment: "2025.03.11_nsynth_test_pclass_embed"
 
 #data_dir: "/home/lonce/scratchdata/Lala_data/lala_dac"
 #data_frames: "/home/lonce/scratchdata/Lala_data/lala-train.xlsx"
 data_dir: "/home/lonce/scratchdata/nsynth44.1/nsynth44.1_dac"
-data_frames: "/home/lonce/scratchdata/nsynth44.1/nsynth44.1_pfloat.xlsx"
+data_frames: "/home/lonce/scratchdata/nsynth44.1/nsynth44.1_pclass.xlsx"
 validator_data_dir: null
 validator_data_frames: null
 
@@ -13,14 +13,14 @@ vocab_size: 1024
 num_tokens: 4
 
 #cond_params: 1 #1 (not counting the classes)
-model_size: 512 # must be divisible by num_heads
+model_size: 256 # must be divisible by num_heads
 
 Ti: 43 #86 # 172 #86 mask size for training and training, mask and windowsize for inference 
 Tt: 215 # must match the length of the sequences in the batch
 batch_size: 6  #**
 
 
-num_layers: 4 #**
+num_layers: 2 #**
 num_heads: 8 #8 # 8 # embed_size must be divisible by num_heads
 forward_expansion: 4 #4 #4
 dropout_rate: 0.2

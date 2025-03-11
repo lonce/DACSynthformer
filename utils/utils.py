@@ -299,4 +299,37 @@ def breakpoints_classseq(class_list, pvals, **kwargs):
             vsequence.append(t)
 
     return { 'vsequence': vsequence, 'vtimes': vtimes}
+
+
+def hotsequence(baselist, indexlist, val):
+    """
+    Creates a list of tensors for vsequence where each tensor is a copy of baselist
+    except that it has a 1 at a specified index from indexlist.
+    Each index in indexlist generates two identical tensors.
+
+    Args:
+        baselist (list or tensor): The base list/tensor to copy and modify.
+        indexlist (list): List of indices where the value should be set to 1.
+
+    Returns:
+        list: A list of modified tensors (two per index).
+    """
+    # Convert baselist to a tensor if it isn't already
+    base_tensor = torch.tensor(baselist, dtype=torch.float32)
+
+    # List to store the modified tensors
+    tensor_list = []
+
+    for i in indexlist:
+        modified_tensor = base_tensor.clone()  # Copy the base tensor
+        modified_tensor[i] = val  # Set the specified index to val
+        
+        # Append two identical tensors
+        tensor_list.append(modified_tensor.clone())
+        tensor_list.append(modified_tensor.clone())
+
+    vtimes=timesegs(len(indexlist))
+    return { 'vsequence': tensor_list, 'vtimes': vtimes}
+
+
     
