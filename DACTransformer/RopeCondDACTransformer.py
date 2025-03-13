@@ -85,17 +85,101 @@ class RotaryPositionalEmbedding(nn.Module):
         return torch.cat((qk_sin, qk_cos), dim=-1)
 # ------------------------------------------------------------------------------
 
-# Multiembedding Layer
+# # Multiembedding Layer
+# class MultiEmbedding(nn.Module):
+#     def __init__(self, vocab_size, per_token_embed_size, num_tokens):
+#         super().__init__()
+#         self.embeddings = nn.ModuleList([nn.Embedding(vocab_size, per_token_embed_size) for _ in range(num_tokens)])
+
+#     def forward(self, x):
+#         # x shape: (batch, seq_len, num_tokens)
+#         embeddings = [self.embeddings[i](x[:, :, i]) for i in range(len(self.embeddings))]
+#         #print(f"------- In MultiEmbedding will return a vector of shape  ={torch.cat(embeddings, dim=-1).shape}")
+#         return torch.cat(embeddings, dim=-1)  # Concatenate embeddings along the last dimension
+
+
+# This version allows us to pass either integer tokens (in which case nn.Embedding is used for efficiency) OR 
+# vectors of floating point data (eg mel spectrograms - one "token") OR multiple tokens of n-D floaating point values (e.g. 
+# DAC latent space codes) that would be embedded independently and concatenated.  
+
+
 class MultiEmbedding(nn.Module):
-    def __init__(self, vocab_size, per_token_embed_size, num_tokens):
+    def __init__(self, vocab_size_or_input_dim, embed_dim, num_tokens, input_type="int"):
+        """
+        MultiEmbedding class that supports either integer token embeddings (nn.Embedding)
+        or floating-point token projections (nn.Linear), while ensuring input always has 3D shape.
+
+        Args:
+            vocab_size_or_input_dim (int): 
+                - If `input_type="int"`, this is the vocabulary size.
+                - If `input_type="float"`, this is the per-token input feature dimension.
+            embed_dim (int): The total embedding dimension (split across `num_tokens`).
+            num_tokens (int): Number of tokens per input.
+            input_type (str): "int" for integer tokens (uses nn.Embedding), "float" for float tokens (uses nn.Linear).
+        """
         super().__init__()
-        self.embeddings = nn.ModuleList([nn.Embedding(vocab_size, per_token_embed_size) for _ in range(num_tokens)])
+
+        print(f'Initializing MultiEmbedding with vocab_size_or_input_dim={vocab_size_or_input_dim}, embed_dim = {embed_dim}, and num_tokens = {num_tokens}')
+
+        self.input_type = input_type.lower()
+        self.num_tokens = num_tokens
+        self.split_embed_dim = embed_dim // num_tokens  # Each token gets embed_dim / num_tokens
+
+        if self.input_type == "int":
+            # Use nn.Embedding for integer tokens
+            self.layers = nn.ModuleList([
+                nn.Embedding(vocab_size_or_input_dim, self.split_embed_dim) 
+                for _ in range(num_tokens)
+            ])
+        elif self.input_type == "float":
+            # Use nn.Linear for continuous tokens
+            self.layers = nn.ModuleList([
+                nn.Linear(vocab_size_or_input_dim, self.split_embed_dim) 
+                for _ in range(num_tokens)
+            ])
+        else:
+            raise ValueError("input_type must be either 'int' or 'float'.")
 
     def forward(self, x):
-        # x shape: (batch, seq_len, num_tokens)
-        embeddings = [self.embeddings[i](x[:, :, i]) for i in range(len(self.embeddings))]
-        #print(f"------- In MultiEmbedding will return a vector of shape  ={torch.cat(embeddings, dim=-1).shape}")
-        return torch.cat(embeddings, dim=-1)  # Concatenate embeddings along the last dimension
+        """
+        Forward pass ensuring `x` is always 3D.
+
+        Args:
+            x (Tensor): 
+                - If `input_type="int"`: Shape (batch, seq_len, num_tokens), containing integer indices.
+                - If `input_type="float"`: Shape (batch, seq_len, num_tokens * vocab_size_or_input_dim), 
+                  containing concatenated floating-point token vectors.
+
+        Returns:
+            Tensor: Shape (batch, seq_len, embed_dim), where `embed_dim` is distributed across tokens.
+        """
+        batch_size, seq_len, stacked_dim = x.shape  # Always 3D
+
+        if self.input_type == "int":
+            # Ensure integer input shape is valid
+            if stacked_dim != self.num_tokens:
+                raise ValueError(f"Expected input shape (batch, seq_len, {self.num_tokens}) for integer tokens, got {x.shape}")
+
+            # Apply embedding to each token independently
+            embeddings = torch.stack([self.layers[i](x[:, :, i]) for i in range(self.num_tokens)], dim=2)
+
+        elif self.input_type == "float":
+            # Ensure float input shape is valid
+            input_dim_per_token = self.layers[0].in_features
+            expected_dim = self.num_tokens * input_dim_per_token
+
+            if stacked_dim != expected_dim:
+                raise ValueError(f"Expected input shape (batch, seq_len, {expected_dim}) for float tokens, got {x.shape}")
+
+            # Reshape to (batch, seq_len, num_tokens, input_dim_per_token)
+            x = x.view(batch_size, seq_len, self.num_tokens, input_dim_per_token)
+
+            # Apply linear projection independently for each token
+            embeddings = torch.stack([self.layers[i](x[:, :, i, :]) for i in range(self.num_tokens)], dim=2)
+
+        # Merge num_tokens dimension
+        embeddings = embeddings.view(batch_size, seq_len, -1)  # Final shape: (batch, seq_len, embed_dim)
+        return embeddings
 
 
 #--------------------------------------------------------------
@@ -227,7 +311,7 @@ class TransformerBlock(nn.Module):
 
 #-------------------------------------------------------------------
 class RopeCondDACTransformer(nn.Module):
-    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, use_adaLN=False, verbose=0):
+    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, input_type="float", use_adaLN=False, verbose=0):
         super(RopeCondDACTransformer, self).__init__()
         self.embed_size = embed_size
         self.num_heads = num_heads
@@ -245,7 +329,9 @@ class RopeCondDACTransformer(nn.Module):
         assert (self.embed_size // num_heads) * num_heads == self.embed_size, f"embed_dim ({self.embed_size}) must be divisible by num_heads ({num_heads})"
         print(f"Setting up MultiEmbedding with vocab_size= {vocab_size}, embed_size= {embed_size}, num_codebooks= {num_codebooks}")
         
-        self.multi_embedding = MultiEmbedding(vocab_size, embed_size // num_codebooks, num_codebooks)
+        #self.multi_embedding = MultiEmbedding(vocab_size, embed_size // num_codebooks, num_codebooks, input_type=input_type)
+        self.multi_embedding = MultiEmbedding(vocab_size, embed_size , num_codebooks, input_type=input_type)
+
         self.positional_embedding = RotaryPositionalEmbedding(embed_size, max_len)
         self.dropout_layer = nn.Dropout(dropout)
 

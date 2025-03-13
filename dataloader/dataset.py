@@ -1,12 +1,16 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 import os
+
 import dac
+import numpy as np # for mel files
+
 import torch.nn.functional as F  # for the integer to one-hot
 import pandas as pd
 
+
 class CustomDACDataset(Dataset):
-    def __init__(self, data_dir, metadata_excel, Tt=None, transforms=None):
+    def __init__(self, data_dir, metadata_excel, ftype='dac', Tt=None, transforms=None):
         """
         Args:
             data_dir (string): Directory with all the data files.
@@ -34,6 +38,8 @@ class CustomDACDataset(Dataset):
         class_name_index = self.metadata_df.columns.get_loc("Class Name")
         self.param_columns = self.metadata_df.columns[class_name_index + 1:].tolist()
 
+        self.ftype=ftype
+
         if Tt != None :
             self.seqLength=Tt+1
         else: 
@@ -60,9 +66,20 @@ class CustomDACDataset(Dataset):
     def get_sequence_length(self, filename):
         """Load a DAC file and return the sequence length (T)."""
         try:
-            dacfile = dac.DACFile.load(filename)  # Load the DAC file
-            data = dacfile.codes  # Extract the data
-            data = data.squeeze(0)  # Remove the first dimension if it's 1
+            if self.ftype=='dac':
+                dacfile = dac.DACFile.load(filename)  # Load the DAC file
+                data = dacfile.codes  # Extract the data
+            if self.ftype=='mel':
+                datain = np.load(filename)
+                data = torch.tensor(datain)
+
+            print(f' in get_sequence_length, data.shape is {data.shape}')
+
+            # Assuming data is a tensor of shape [1, N, T],
+            # remove the first dimension to get a tensor of shape [N, T]
+            data = data.squeeze(0)
+
+
             return data.shape[-1]  # Get the sequence length (last dimension)
         except Exception as e:
             raise ValueError(f"Error loading file {filename}: {e}")
@@ -95,8 +112,15 @@ class CustomDACDataset(Dataset):
     def __getitem__(self, idx):
         filename = self.file_names[idx]
         fpath = os.path.join(self.data_dir, filename)
-        dacfile = dac.DACFile.load(fpath)  # Load the data file
-        data = dacfile.codes
+        if self.ftype=='dac':
+            dacfile = dac.DACFile.load(fpath)  # Load the data file
+            data = dacfile.codes
+        if self.ftype=='mel':
+            datain = np.load(fpath)
+            data = torch.tensor(datain)
+       
+
+        # print(f' in __getitem__, LOADED shape is {data.shape}')
 
         # Assuming data is a tensor of shape [1, N, T],
         # remove the first dimension to get a tensor of shape [N, T]
@@ -104,9 +128,9 @@ class CustomDACDataset(Dataset):
 
         # Get the sequence length (T) for this file
         T = data.shape[-1]
-        
         # Assert that the sequence length is the same as in init
         assert T == self.seqLength, f"Sequence length mismatch: expected {self.seqLength}, but got {T} in {filename}"
+
 
         # Input: all time steps except the last one
         input_data = data[:, :-1]
@@ -114,6 +138,16 @@ class CustomDACDataset(Dataset):
         target_data = data[:, 1:]
         
         condvect = self.extract_conditioning_vector(filename)
-        
+        #print(f'getting input item of shape {input_data.transpose(0, 1).shape()}, and condvect of shape {convect.shape()}')
         # Transpose so that data has shape [T, N] for the transformer
-        return input_data.transpose(0, 1), target_data.transpose(0, 1), condvect
+
+
+        #print(type(input_data))  # Is it a tensor or something else?
+        #print(isinstance(input_data, torch.Tensor))  # Should return True if foo is a tensor
+        #print(input_data.shape)  # Check the actual shape
+
+
+        id=input_data.transpose(0, 1)
+        td=target_data.transpose(0, 1)
+
+        return id, td, condvect
