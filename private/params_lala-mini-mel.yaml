@@ -1,7 +1,7 @@
 experiment: "mini_test_2"
 
 data_dir: "/home/lonce/scratchdata/Lala_data/lala_mel"
-data_frames: "/home/lonce/scratchdata/Lala_data/lala_class_train_mel.xlsx"
+data_frames: "/home/lonce/scratchdata/Lala_data/lala_mel_class_train.xlsx"
 validator_data_dir: null
 validator_data_frames: null
 
@@ -27,8 +27,8 @@ dropout_rate: 0.2
 learning_rate: 0.0005
 use_adaLN: False #else FiLM
 
-num_epochs: 20 ### 800 
+num_epochs: 1000 ### 800 
 
-ErrorLogRate: 1 #2 ### 10
-checkpoint_interval: 20 ###50 # 25
+ErrorLogRate: 25 #2 ### 10
+checkpoint_interval: 200 ###50 # 25
 
