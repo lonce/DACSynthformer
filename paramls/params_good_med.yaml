@@ -1,27 +1,26 @@
-experiment: "2025.02.19_ROPE_mask86layers4fexp4"
-#testsnd: "" # pistons, wind, applause, bees, chirp, toks, peep
+experiment: "2025.02.12_bigmasklayers2exp4"
+testsnd: "" # pistons, wind, applause, bees, chirp, toks, peep
 
 # for docker:
 data_dir: "/scratch/syntexnew/dacdata7/train_sm"
 validator_data_dir: "/scratch/syntexnew/dacdata7/val"
 
-#data_dir: "/home/lonce/scratchdata/syntexnew/dacdata7/train_sm"
-#validator_data_dir: "/home/lonce/scratchdata/syntexnew/dacdata7/val"
+TransformerClass: "RopeCondDACTransformer" 
 
-TransformerClass: "RopeCondDACTransformer" # "PostNormCondDACTransformerDecoder" # "ClassConditionedKeyTransformer" # 
-
+ftype: 'dac' # dac or mel
 vocab_size: 1024
+input_type: "int" # int (for tokens), or "float" (for decoded tokens or mel spectrograms, etc)
 num_tokens: 4
 
 cond_params: 1 #1 (not counting the classes)
-model_size: 512 # must be divisible by num_heads
+tblock_input_size: 512  #embedding+conditioning vect
 
-Ti: 86 # 172 #86
+Ti: 172 # 172 #86
 Tt: 430 # must match the length of the sequences in the batch
 batch_size: 8  #**
 
 
-num_layers: 4 #**
+num_layers: 2 #**
 num_heads: 8 # 8 # embed_size must be divisible by num_heads
 forward_expansion: 4 # 4 #4
 dropout_rate: 0.2
@@ -31,5 +30,5 @@ use_adaLN: True #else FiLM
 num_epochs: 250 ### 800 
 
 ErrorLogRate: 10 ### 10
-checkpoint_interval: 25 ###50 # 25
+checkpoint_interval: 50 ###50 # 25
 

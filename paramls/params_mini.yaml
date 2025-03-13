@@ -1,9 +1,9 @@
 experiment: "mini_test_2"
 
-data_dir: "testdata/dac-train"
-data_frames: "testdata/dac-train.xlsx"
-validator_data_dir: "testdata/dac-val"
-validator_data_frames: "testdata/dac-val.xlsx"
+data_dir: "testdata/minisyntex/dac-train"
+data_frames: "testdata/minisyntex/dac-train.xlsx"
+validator_data_dir: "testdata/minisyntex/dac-val"
+validator_data_frames: "testdata/minisyntex/dac-val.xlsx"
 
 
 TransformerClass: "RopeCondDACTransformer" 

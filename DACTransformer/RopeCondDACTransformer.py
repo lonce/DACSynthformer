@@ -291,9 +291,12 @@ class TransformerBlock(nn.Module):
             print(f"Conditioning-modulated shape before attention: {src.shape}")
 
         # Apply conditioning (FiLM or AdaLN) before attention
+       #  print(f'Transformer Block about to call FilM with src.dtype = {src.dtype}')
+        # print(f'Transformer Block about to call FilM with cond.dtype = {cond.dtype}')
         modulated_src = self.conditioning1(src, cond)
         
         # Pass through attention with RoPE
+        # print(f'Transformer Block about to call attention with modulated_src.dtype = {modulated_src.dtype}')
         attention_output, _ = self.attention(modulated_src, modulated_src, modulated_src, attn_mask=mask)
         x = self.dropout_layer(attention_output) + modulated_src
 
@@ -327,9 +330,10 @@ class RopeCondDACTransformer(nn.Module):
         self.use_adaLN = use_adaLN  # Toggle for conditioning type
 
         assert (self.embed_size // num_heads) * num_heads == self.embed_size, f"embed_dim ({self.embed_size}) must be divisible by num_heads ({num_heads})"
-        print(f"Setting up MultiEmbedding with vocab_size= {vocab_size}, embed_size= {embed_size}, num_codebooks= {num_codebooks}")
+        # print(f"Setting up MultiEmbedding with vocab_size= {vocab_size}, embed_size= {embed_size}, num_codebooks= {num_codebooks}")
         
         #self.multi_embedding = MultiEmbedding(vocab_size, embed_size // num_codebooks, num_codebooks, input_type=input_type)
+        # print(f'MultiEmbedding : input_type = {input_type}')
         self.multi_embedding = MultiEmbedding(vocab_size, embed_size , num_codebooks, input_type=input_type)
 
         self.positional_embedding = RotaryPositionalEmbedding(embed_size, max_len)
@@ -369,6 +373,7 @@ class RopeCondDACTransformer(nn.Module):
             if mask is not None:
                 print(f"Mask shape: {mask.shape}")
 
+            print(f'MultiEmbedding forwad src type is  : {src.dtype}')
         src = self.multi_embedding(src)
         src = self.dropout_layer(src)
 

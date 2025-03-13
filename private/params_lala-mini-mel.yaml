@@ -1,7 +1,7 @@
 experiment: "mini_test_2"
 
-data_dir: "/home/lonce/scratchdata/Lala_data/lala_mel"
-data_frames: "/home/lonce/scratchdata/Lala_data/lala_mel_class_train.xlsx"
+data_dir: "testdata/Lala_data/lala_mel"
+data_frames: "testdata/Lala_data/lala_mel_class_train.xlsx"
 validator_data_dir: null
 validator_data_frames: null
 

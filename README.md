@@ -7,8 +7,8 @@ DACSynthformer is a basic transformer that runs on the Descript Audio Codec repr
 This option is perfect for CPU's. You need to have miniconda (or conda) installed: https://docs.anaconda.com/miniconda/install/ . Then:
 
 ~~~
-conda create --name dacformer python==3.10
-conda activate dacformer
+conda create --name synthformer python==3.10
+conda activate synthformer
 pip install -r requirements.txt
 jupyter lab &
 ~~~
@@ -56,7 +56,10 @@ This runs a very minimal model, and doesn't train long enough to generate anythi
 
 **Note:** the parameter you choose for 'device' must be available on your system, and can be either 'cpu', 'cuda', or (for Macs with "Metal Performance Shaders") 'mps'.
 
+
+
 ## Preparing data: 
+
 
 The conda and docker environments have already installed the Descript DAC codec package, so you can encode .wav files to .dacs and decode .dac file to .wavs. Just encode a folder of wav files like this:
 
@@ -69,8 +72,12 @@ https://github.com/descriptinc/descript-audio-codec
 **Note:** All files must be the same length (have the same number of dac frames) and that length will be one more than the context window used for training (becuase the target is the input shifted by 1). (I use 5 seconds of audio which the encode command converts to 431 dac frames (86 frames/sec). The Tt variable ("**T**imesteps **t**raining" = context length) must be set in your param yaml file, too (one less than your file length). You can check the sequence length of your files: 
 
 ```bash
-python    utils/dacFileSeqLength.py    path/to/foo.dac
+python    sfutils/dacFileSeqLength.py    path/to/foo.dac
 ```
+
+
+
+**Create xlsx spred of data frames for pandas:**
 
 Then prepare your excel data file (that pandas will use). It should have columns, with labels in the first row:
 
@@ -122,3 +129,35 @@ The sounds are from the Syntex sound textures data set syntex data set ( https:/
 * FM, with a 'modulation frequency' parameter
 
 These sounds all sample their parameter space [0,1] in steps of .05. There are 630 files per sound class (30 5 second samples at each parameter value), totaling about 6 hours of audio. 
+
+<div style="background-color: lightblue; padding: 10px;">
+</div>
+
+## Running on mel spectrograms instead of DAC: 
+
+The Synthformer can be run on Mel spectrograms, too. Although this means regressing to predict spectrograms rather than probabilities over a vocabulary, most of the core transformer code is the same. 
+
+In your activated synthformer conda environment, clone BigVGAN: https://github.com/NVIDIA/BigVGAN . You should then have the BigVGAN folder in your root folder. cd to your BigVGAN folder, and run
+
+```
+pip install -r requirements.txt
+```
+
+and then install (one of) their pretrained models:
+
+```shell
+git lfs install
+git clone https://huggingface.co/nvidia/bigvgan_v2_44khz_128band_512x
+```
+
+ change directory back up to your root, and add BigVGAN to your PYTHONPATH env variable:  
+```shell
+export PYTHONPATH="$(pwd):$(pwd)/BigVGAN:$PYTHONPATH" 
+```
+
+Now you are ready to convert a directory of wav files (44.1kHz, mono, all the same length) to mel spectrogram which will be written as .npy files: 
+```shell
+python shutils/wavs2mels.py /path/to/wavefiles  /path/to/melfiles
+```
+
+Next create the data frames file (see **Create xlsx spred of data frames for pandas:** above). Also see  ./testdata/Lala_data for what the files and file structure might look like. 
