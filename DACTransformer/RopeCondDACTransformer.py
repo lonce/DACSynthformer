@@ -314,7 +314,7 @@ class TransformerBlock(nn.Module):
 
 #-------------------------------------------------------------------
 class RopeCondDACTransformer(nn.Module):
-    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, input_type="float", use_adaLN=False, verbose=0):
+    def __init__(self, embed_size, num_layers, num_heads, forward_expansion, dropout, max_len, num_classes, num_codebooks, vocab_size, cond_size, input_type, use_adaLN=False, verbose=0):
         super(RopeCondDACTransformer, self).__init__()
         self.embed_size = embed_size
         self.num_heads = num_heads
@@ -328,12 +328,13 @@ class RopeCondDACTransformer(nn.Module):
         self.cond_size = cond_size
         self.verbose = verbose
         self.use_adaLN = use_adaLN  # Toggle for conditioning type
+        self.input_type = input_type
 
         assert (self.embed_size // num_heads) * num_heads == self.embed_size, f"embed_dim ({self.embed_size}) must be divisible by num_heads ({num_heads})"
         # print(f"Setting up MultiEmbedding with vocab_size= {vocab_size}, embed_size= {embed_size}, num_codebooks= {num_codebooks}")
         
         #self.multi_embedding = MultiEmbedding(vocab_size, embed_size // num_codebooks, num_codebooks, input_type=input_type)
-        # print(f'MultiEmbedding : input_type = {input_type}')
+        print(f'MultiEmbedding : input_type = {input_type}')
         self.multi_embedding = MultiEmbedding(vocab_size, embed_size , num_codebooks, input_type=input_type)
 
         self.positional_embedding = RotaryPositionalEmbedding(embed_size, max_len)

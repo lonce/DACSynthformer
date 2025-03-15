@@ -19,13 +19,36 @@ def save_model(model, optimizer, inf_context_length, filepath):
         'cond_size': model.cond_size,
         'use_adaLN' : model.use_adaLN,
         'num_classes': model.num_classes,
+        'input_type': model.input_type
     }, filepath)
+
+    # #DEBUG
+    # # Print keys and tensor shapes in the checkpoint
+    # print(f'******************************************************')
+    # checkpoint = torch.load(filepath) 
+    # # Print top-level keys to check structure
+    # print(f"Checkpoint keys: {checkpoint.keys()}")
+    # for k, v in checkpoint["model_state_dict"].items():
+    #     print(f"{k}: {v.shape}")
+    # print(f'******************************************************')
+
 
 #-----------------------------------------------------
 
 def load_model(filepath, TransformerClass, device='cuda', verbose=0):
     checkpoint = torch.load(filepath, map_location=device)  
     inf_context_length = checkpoint['inf_context_length'] # This is used to set the context length for the inference model
+
+
+    # #DEBUG
+    # # Print keys and tensor shapes in the checkpoint
+    # print(f'******************************************************')
+    # # Print top-level keys to check structure
+    # print(f"Checkpoint keys: {checkpoint.keys()}")
+    # for k, v in checkpoint["model_state_dict"].items():
+    #     print(f"{k}: {v.shape}")
+    # print(f'******************************************************')
+
     
     model =  TransformerClass(
         embed_size=checkpoint['embed_size'],
@@ -40,8 +63,11 @@ def load_model(filepath, TransformerClass, device='cuda', verbose=0):
         cond_size= checkpoint['cond_size'],
         use_adaLN= checkpoint['use_adaLN'],
         num_classes = checkpoint['num_classes'],
+        input_type = checkpoint['input_type'],
         verbose=verbose
     )
+
+    
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer = torch.optim.Adam(model.parameters())
     optimizer.load_state_dict(checkpoint['optimizer_state_dict']) #also restored lr

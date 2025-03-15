@@ -5,9 +5,17 @@ import soundfile as sf
 from joblib import Parallel, delayed
 
 import torch
-import bigvgan
 import librosa
+
+import sys
+# Get the path of the subdirectory
+subdir_path = os.path.abspath("BigVGAN")  # Update with actual path
+# Add it to sys.path
+if subdir_path not in sys.path:
+    sys.path.append(subdir_path)
+import bigvgan
 from meldataset import get_mel_spectrogram
+
 
 sr = 44100
 #device = 'cpu'

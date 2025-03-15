@@ -3,10 +3,10 @@ import pandas as pd
 from glob import glob
 import argparse
 
-def parse_filename(filename):
+def parse_filename(filename, ext):
     """
     Given a filename like:
-      TokWotalDuet--wmratio-01.00--c-02--x-98.dac
+      TokWotalDuet--wmratio-01.00--c-02--x-98.ext
     This function extracts:
       - Class Name: 'TokWotalDuet'
       - Parameter values (ignoring their names), in order:
@@ -15,7 +15,7 @@ def parse_filename(filename):
     """
     # Remove directory path and file extension
     base = os.path.basename(filename)
-    if base.endswith('.dac'):
+    if base.endswith('.'+ext):
         base = base[:-4]
     
     # Split the filename using '--' as the delimiter
@@ -49,20 +49,21 @@ def parse_filename(filename):
     
     return info
 
-def create_excel_from_files(directory, output_excel):
+def create_excel_from_files(directory, ext, output_excel):
     """
-    Searches for .dac files in the specified directory, parses each file,
+    Searches for .ext files in the specified directory, parses each file,
     and writes an Excel file with columns for:
       - Full File Name
       - Class Name
       - Param1, Param2, ..., ParamN (the parameter values in order)
     """
     data = []
-    file_list = glob(os.path.join(directory, '*.dac'))
+    #file_list = glob(os.path.join(directory, '*.dac'))
+    file_list = glob(os.path.join(directory, f'*.{ext}'))
     
     for file in file_list:
         full_name = os.path.basename(file)
-        file_info = parse_filename(full_name)
+        file_info = parse_filename(full_name, ext)
         if file_info:
             # Include the full file name in the dictionary
             file_info['Full File Name'] = full_name
@@ -87,10 +88,11 @@ def create_excel_from_files(directory, output_excel):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Process .dac files to create an Excel summary with parameters labeled as 'Param1', 'Param2', etc."
+        description="Process .ext files to create an Excel summary with parameters labeled as 'Param1', 'Param2', etc."
     )
-    parser.add_argument('directory', type=str, help="Directory where .dac files are located")
+    parser.add_argument('directory', type=str, help="Directory where .ext files are located")
+    parser.add_argument('ext', type=str, help="the extention of the files in the directory you wan to process")
     parser.add_argument('output_excel', type=str, help="Output Excel file path and filename")
     args = parser.parse_args()
 
-    create_excel_from_files(args.directory, args.output_excel)
+    create_excel_from_files(args.directory, args.ext, args.output_excel)

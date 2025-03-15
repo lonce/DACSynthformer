@@ -89,8 +89,15 @@ def savefordiary(adata, param_jpg, log_dir, pathname, fname, dfile, sr=44100):
     
     # Compute and save the spectrogram
     plt.figure(figsize=(10, 4))
-    D = librosa.amplitude_to_db(librosa.stft(adata), ref=np.max)
-    librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log')
+    
+    if 0 : # plot linear spectrogram
+        D = librosa.amplitude_to_db(librosa.stft(adata), ref=np.max)
+        librosa.display.specshow(D, sr=sr, x_axis='time', y_axis='log')
+    else: # plot mel spectrogram
+        mel_spec = librosa.feature.melspectrogram(y=adata, sr=sr, n_mels=128)
+        mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
+        librosa.display.specshow(mel_spec_db, sr=sr, x_axis='time', y_axis='mel')
+
     plt.colorbar(format='%+2.0f dB')
     plt.title(f"{pathname}/{fname}")
     plt.savefig(spectrogram_path, bbox_inches='tight')

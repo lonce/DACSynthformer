@@ -6,6 +6,7 @@ validator_data_dir: "testdata/minisyntex/dac-val"
 validator_data_frames: "testdata/minisyntex/dac-val.xlsx"
 
 
+
 TransformerClass: "RopeCondDACTransformer" 
 
 ftype: 'dac' # dac or mel
