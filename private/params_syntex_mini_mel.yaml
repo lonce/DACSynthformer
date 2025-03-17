@@ -17,20 +17,20 @@ num_tokens: 1
 #cond_params: 1 #1 (not counting the classes)
 model_size: 128 # must be divisible by num_heads
 
-Ti: 43 # 172 #86 mask size for training and training, mask and windowsize for inference 
+Ti: 86 # 172 #86 mask size for training and training, mask and windowsize for inference 
 Tt: 429 # must match the length of the sequences in the batch
 batch_size: 4  #**
 
 
 num_layers: 2 #**
-num_heads: 4 #8 # 8 # embed_size must be divisible by num_heads
+num_heads: 8 #8 # 8 # embed_size must be divisible by num_heads
 forward_expansion: 2 #4 #4
 dropout_rate: 0.2
 learning_rate: 0.0005
 use_adaLN: False #else FiLM
 
-num_epochs: 100 ### 800 
+num_epochs: 4000 ### 800 
 
-ErrorLogRate: 10 #2 ### 10
-checkpoint_interval: 100 ###50 # 25
+ErrorLogRate: 25 #2 ### 10
+checkpoint_interval: 500 ###50 # 25
 
