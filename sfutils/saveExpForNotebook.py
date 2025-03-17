@@ -39,7 +39,7 @@ def plot_tensorboard_loss(log_dir, output_path):
 
     # Create figure without displaying it
     plt.ioff()  # Turn off interactive mode to prevent display
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(10, 3))
 
     for tag in loss_tags:
         loss_events = event_acc.Scalars(tag)  # Extract data
@@ -74,18 +74,23 @@ def plot_tensorboard_loss(log_dir, output_path):
 # dfile - name of the config file to copy to the pathname folder and provide as a link in the html output
 # sr=44100
 # usage: md_text, displaypath = savefordiary(adata, paramplotfname, diarydir, experiment_name, paramfile) 
-def savefordiary(adata, param_jpg, log_dir, pathname, fname, dfile, sr=44100):
+def savefordiary(adata, param_jpg, sfmelplotfname, log_dir, pathname, fname, dfile, sr=44100):
     # Ensure output directory exists
     os.makedirs(pathname, exist_ok=True)
     
     # Define file paths
     spectrogram_path = os.path.join(pathname, f"{fname}.jpg")
     wav_path = os.path.join(pathname, f"{fname}.wav")
+    wave_fig_path = os.path.join(pathname, f"{fname}_waveform.jpg")
     param_fig_path = os.path.join(pathname, f"{fname}_params.jpg")
+    sfmel_path = os.path.join(pathname, f"{fname}_sfmel.jpg")
     lossplot_path = os.path.join(pathname, f"{fname}_loss.jpg")
     
     # Copy the provided parameter JPEG file
     shutil.copy(param_jpg, param_fig_path)
+    
+    # Copy the provided transformer mel spectrogram JPEG file
+    shutil.copy(sfmelplotfname, sfmel_path)
     
     # Compute and save the spectrogram
     plt.figure(figsize=(10, 4))
@@ -97,12 +102,22 @@ def savefordiary(adata, param_jpg, log_dir, pathname, fname, dfile, sr=44100):
         mel_spec = librosa.feature.melspectrogram(y=adata, sr=sr, n_mels=128)
         mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
         librosa.display.specshow(mel_spec_db, sr=sr, x_axis='time', y_axis='mel')
-
+        plt.title("Mel spectrogram from Audio")
+        
     plt.colorbar(format='%+2.0f dB')
-    plt.title(f"{pathname}/{fname}")
     plt.savefig(spectrogram_path, bbox_inches='tight')
     plt.close()
-    
+
+    #plot and save image of waveform
+    plt.figure(figsize=(10, 2))
+    librosa.display.waveshow(adata, sr=44100)
+    plt.xlabel("Time (seconds)")
+    plt.ylabel("Amplitude")
+    plt.title("Waveform")
+    plt.savefig( wave_fig_path, bbox_inches='tight')
+    plt.close()
+
+
     # Save the audio file
     sf.write(wav_path, adata, sr)
 
@@ -117,7 +132,9 @@ def savefordiary(adata, param_jpg, log_dir, pathname, fname, dfile, sr=44100):
     notebook_text = f"""
 {pathname}/{fname}<br>
 <img width="600" height="500" src="{param_fig_path}">  <br>
-<img width="600" height="500" src="{spectrogram_path}">  <br>
+<img width="640" height="500" src="{sfmel_path}">  <br>
+<img width="550" height="500" src="{wave_fig_path}">  <br>
+<img width="640" height="500" src="{spectrogram_path}">  <br>
 <audio src="{wav_path}" controls>alternative text</audio>  <br>
 <img width="600" height="500" src="{lossplot_path}">  <br>
 <a href="{dfile_copy_path}">paramfile link</a>
