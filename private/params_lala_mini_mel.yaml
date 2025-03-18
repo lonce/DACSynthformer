@@ -1,0 +1,34 @@
+experiment: "mini_test_256big"
+
+data_dir: "testdata/Lala_data/lala_mel"
+data_frames: "testdata/Lala_data/lala_mel_class_train.xlsx"
+validator_data_dir: null
+validator_data_frames: null
+
+TransformerClass: "RopeCondDACTransformer" 
+
+ftype: 'mel' # dac or mel
+vocab_size: 128 # must match the number of frequency bins saved in the data files
+input_type: "float"
+num_tokens: 1
+
+#cond_params: 1 #1 (not counting the classes)
+model_size: 256 # must be divisible by num_heads
+
+Ti: 86 # 172 #86 mask size for training and training, mask and windowsize for inference 
+Tt: 429 # must match the length of the sequences in the batch
+batch_size: 4  #**
+
+
+num_layers: 4 #**
+num_heads: 8 #8 # 8 # embed_size must be divisible by num_heads
+forward_expansion: 2 #4 #4
+dropout_rate: 0.2
+learning_rate: 0.0005
+use_adaLN: False #else FiLM
+
+num_epochs: 2000 ### 800 
+
+ErrorLogRate: 25 #2 ### 10
+checkpoint_interval: 200 ###50 # 25
+

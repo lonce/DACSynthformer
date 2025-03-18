@@ -17,14 +17,38 @@ def save_model(model, optimizer, inf_context_length, filepath):
         'num_codebooks': model.num_codebooks, 
         'vocab_size': model.vocab_size,
         'cond_size': model.cond_size,
+        'use_adaLN' : model.use_adaLN,
         'num_classes': model.num_classes,
+        'input_type': model.input_type
     }, filepath)
+
+    # #DEBUG
+    # # Print keys and tensor shapes in the checkpoint
+    # print(f'******************************************************')
+    # checkpoint = torch.load(filepath) 
+    # # Print top-level keys to check structure
+    # print(f"Checkpoint keys: {checkpoint.keys()}")
+    # for k, v in checkpoint["model_state_dict"].items():
+    #     print(f"{k}: {v.shape}")
+    # print(f'******************************************************')
+
 
 #-----------------------------------------------------
 
-def load_model(filepath, TransformerClass, device='cuda'):
+def load_model(filepath, TransformerClass, device='cuda', verbose=0):
     checkpoint = torch.load(filepath, map_location=device)  
     inf_context_length = checkpoint['inf_context_length'] # This is used to set the context length for the inference model
+
+
+    # #DEBUG
+    # # Print keys and tensor shapes in the checkpoint
+    # print(f'******************************************************')
+    # # Print top-level keys to check structure
+    # print(f"Checkpoint keys: {checkpoint.keys()}")
+    # for k, v in checkpoint["model_state_dict"].items():
+    #     print(f"{k}: {v.shape}")
+    # print(f'******************************************************')
+
     
     model =  TransformerClass(
         embed_size=checkpoint['embed_size'],
@@ -37,8 +61,13 @@ def load_model(filepath, TransformerClass, device='cuda'):
         num_codebooks=checkpoint['num_codebooks'],
         vocab_size=checkpoint['vocab_size'],
         cond_size= checkpoint['cond_size'],
-        num_classes = checkpoint['num_classes']
+        use_adaLN= checkpoint['use_adaLN'],
+        num_classes = checkpoint['num_classes'],
+        input_type = checkpoint['input_type'],
+        verbose=verbose
     )
+
+    
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer = torch.optim.Adam(model.parameters())
     optimizer.load_state_dict(checkpoint['optimizer_state_dict']) #also restored lr
@@ -296,4 +325,37 @@ def breakpoints_classseq(class_list, pvals, **kwargs):
             vsequence.append(t)
 
     return { 'vsequence': vsequence, 'vtimes': vtimes}
+
+
+def hotsequence(baselist, indexlist, val):
+    """
+    Creates a list of tensors for vsequence where each tensor is a copy of baselist
+    except that it has a 1 at a specified index from indexlist.
+    Each index in indexlist generates two identical tensors.
+
+    Args:
+        baselist (list or tensor): The base list/tensor to copy and modify.
+        indexlist (list): List of indices where the value should be set to 1.
+
+    Returns:
+        list: A list of modified tensors (two per index).
+    """
+    # Convert baselist to a tensor if it isn't already
+    base_tensor = torch.tensor(baselist, dtype=torch.float32)
+
+    # List to store the modified tensors
+    tensor_list = []
+
+    for i in indexlist:
+        modified_tensor = base_tensor.clone()  # Copy the base tensor
+        modified_tensor[i] = val  # Set the specified index to val
+        
+        # Append two identical tensors
+        tensor_list.append(modified_tensor.clone())
+        tensor_list.append(modified_tensor.clone())
+
+    vtimes=timesegs(len(indexlist))
+    return { 'vsequence': tensor_list, 'vtimes': vtimes}
+
+
     

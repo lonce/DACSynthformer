@@ -25,6 +25,7 @@ class MultiheadAttentionWithRoPE(nn.MultiheadAttention):
 
         if self.verbose > 0 :
             print(f"MultiheadAttentionWithRoPE with q.shape={q.shape}, k.shape={k.shape}, v.shape={v.shape}")
+            print(f"MultiheadAttentionWithRoPE with q.dtype={q.dtype}, k.dtype={k.dtype}, v.dtype={v.dtype}")
             
         # Apply Rotary Positional Encoding (RoPE) to Q and K
         q = self.rotary_positional_embedding(q)
