@@ -108,7 +108,7 @@ def writeDACFile(fname, codeseq) :
         dac_file.save(fname + ".dac")
         
 
-def generate_mask(sz, max_lookback):
+def generate_mask(sz, max_lookback, max_lookahead=0):
     """
     Generates a mask for the attention mechanism that incorporates causal structure with a limited lookback window.
 
@@ -125,7 +125,7 @@ def generate_mask(sz, max_lookback):
     # Fill the band of allowed positions with 0s
     for i in range(sz):
         start = max(0, i - max_lookback)  # Start of the lookback window
-        end = i + 1  # End of the lookback window, non-inclusive
+        end = min(sz, i + max_lookahead + 1)  # Lookahead limit
         mask[i, start:end] = 0.0
 
     return mask

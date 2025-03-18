@@ -1,4 +1,4 @@
-experiment: "syntex_sm_mel_smoothing"
+experiment: "2025.07.18_syntex_sm_mel_smoothing_condMLPonly"
 #testsnd: Chirp DSApp DSBug DSPee DSPis DSWin TokWo
 
 data_dir: "/home/lonce/scratchdata/syntexnew/data7mel/train_sm"
@@ -32,8 +32,8 @@ dropout_rate: 0.2
 learning_rate: 0.0005
 use_adaLN: False #else FiLM
 
-num_epochs: 2000 ### 800 
+num_epochs: 200 ### 800 
 
 ErrorLogRate: 20 ### 10
-checkpoint_interval: 200 ###50 # 25
+checkpoint_interval: 100 ###50 # 25
 
