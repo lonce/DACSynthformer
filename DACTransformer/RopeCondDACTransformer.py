@@ -293,7 +293,7 @@ class TransformerBlock(nn.Module):
         # Apply conditioning (FiLM or AdaLN) before attention
        #  print(f'Transformer Block about to call FilM with src.dtype = {src.dtype}')
         # print(f'Transformer Block about to call FilM with cond.dtype = {cond.dtype}')
-        modulated_src = self.conditioning1(src, cond)
+        modulated_src = src #= self.conditioning1(src, cond)
         
         # Pass through attention with RoPE
         # print(f'Transformer Block about to call attention with modulated_src.dtype = {modulated_src.dtype}')

@@ -1,4 +1,4 @@
-experiment: "2025.07.18_syntex_sm_mel_smoothing_condMLPonly"
+experiment: "2025.03.19_syntex_sm_mel_smoothing_wtf"
 #testsnd: Chirp DSApp DSBug DSPee DSPis DSWin TokWo
 
 data_dir: "/home/lonce/scratchdata/syntexnew/data7mel/train_sm"
@@ -20,9 +20,11 @@ num_tokens: 1
 
 model_size: 256 # must be divisible by num_heads
 
-Ti: 86 # 172 #86
+Ti: 429 # 172 #86
+#Tt: 429 # must match the length of the sequences in the batch
 Tt: 429 # must match the length of the sequences in the batch
 batch_size: 24  #**
+lookahead: 0
 
 
 num_layers: 3 #**
@@ -34,6 +36,6 @@ use_adaLN: False #else FiLM
 
 num_epochs: 200 ### 800 
 
-ErrorLogRate: 20 ### 10
-checkpoint_interval: 100 ###50 # 25
+ErrorLogRate: 10 ### 10
+checkpoint_interval: 50 ###50 # 25
 

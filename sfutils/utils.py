@@ -125,7 +125,7 @@ def generate_mask(sz, max_lookback, max_lookahead=0):
     # Fill the band of allowed positions with 0s
     for i in range(sz):
         start = max(0, i - max_lookback)  # Start of the lookback window
-        end = min(sz, i + max_lookahead + 1)  # Lookahead limit
+        end = min(sz, i + max_lookahead +1)  # Lookahead limit
         mask[i, start:end] = 0.0
 
     return mask
